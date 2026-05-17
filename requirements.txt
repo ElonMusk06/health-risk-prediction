@@ -1,8 +1,8 @@
 streamlit
 pandas
 numpy
-scikit-learn
-imbalanced-learn
+scikit-learn version: 1.6.1
+imbalanced-learn version: 0.13.0
 shap
 matplotlib
 xgboost
