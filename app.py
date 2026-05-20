@@ -27,29 +27,6 @@ st.markdown("""
 
 # Розділення інтерфейсу на колонки
 col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.header("Вхідні дані пацієнта")
-    
-    # Група 1: Демографія та базові показники
-    st.subheader("Демографія")
-    age = st.slider("Вік", 18, 100, 50)
-    gender = st.selectbox("Стать", ["Male", "Female"])
-    ses = st.selectbox("Соціально-економічний статус (SES)", ["Low", "Medium", "High"])
-    
-    # Група 2: Медичні показники
-    st.subheader("Медичні показники")
-    temperature = st.slider("Температура тіла (°C)", 35.5, 41.0, 36.6, step=0.1)
-    chronic = st.number_input("Кількість хронічних захворювань", 0, 10, 0)
-    vaccination = st.radio("Статус вакцинації", ["Ні", "Так"])
-    vaccination_status = 1 if vaccination == "Так" else 0
-    immunity = st.selectbox("Рівень імунітету", ["Low", "Medium", "High"])
-    symptoms = st.selectbox("Симптоми", ["None", "Mild", "Moderate", "Severe"])
-    
-    # Група 3: Соціальні фактори
-    st.subheader("Соціальні фактори")
-    social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"])
-    
 with col1:
     st.header("Вхідні дані пацієнта")
     
