@@ -50,46 +50,72 @@ with col1:
     st.subheader("Соціальні фактори")
     social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"])
     
+with col1:
+    st.header("Вхідні дані пацієнта")
+    
+    # Група 1: Демографія
+    st.subheader("Демографія")
+    age = st.slider("Вік", 18, 100, 50)
+    gender = st.selectbox("Стать", ["Male", "Female"])
+    ses = st.selectbox("Соціально-економічний статус (SES)", ["Low", "Medium", "High"])
+    
+    # Група 2: Медичні показники (ДОДАНО КРИТИЧНІ ОЗНАКИ)
+    st.subheader("Медичні показники")
+    temperature = st.slider("Температура тіла (°C)", 35.5, 41.0, 36.6, step=0.1)
+    chronic = st.number_input("Кількість хронічних захворювань", 0, 10, 0)
+    vaccination = st.radio("Статус вакцинації", ["Ні", "Так"])
+    vaccination_status = 1 if vaccination == "Так" else 0
+    immunity = st.selectbox("Рівень імунітету", ["Low", "Medium", "High"])
+    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"])
+    
+    # НОВІ ПОЛЯ ВВОДУ:
+    disease_severity = st.selectbox("Тяжкість захворювання (Disease Severity)", ["Mild", "Moderate", "Severe"], index=1)
+    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"])
+    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=1)
+    
+    # Група 3: Соціальні фактори
+    st.subheader("Соціальні фактори")
+    social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"])
+
 with col2:
     st.header("Результати прогнозування")
     
     if st.button("Розрахувати ризик", type="primary"):
         if pipeline is not None:
-            # Формування словника з усіма необхідними ознаками для пайплайну
-            # Використовуються введені дані, інші заповнюються типовими значеннями (медіана/мода)
+            # ОНОВЛЕНИЙ СЛОВНИК ВХІДНИХ ДАНИХ
             input_data = {
                 'Age': age,
                 'Gender': gender,
-                'Location': 'Urban', # Типове значення
-                'Ethnicity': 'Ethnicity1', # Типове значення
+                'Location': 'Urban',
+                'Ethnicity': 'Ethnicity1',
                 'SES': ses,
                 'Chronic_Conditions': chronic,
                 'Vaccination_Status': vaccination_status,
                 'Medical_History': 'None',
                 'Immunity_Level': immunity,
                 'Reported_Symptoms': symptoms,
-                'Diagnosis': 'None',
+                'Diagnosis': diagnosis, # Тепер береться з інтерфейсу
                 'Testing_Results': 'Negative',
                 'Temperature': temperature,
-                'AQI': 100, # Середнє значення
-                'Humidity': 50.0, # Середнє значення
+                'AQI': 100,
+                'Humidity': 50.0,
                 'Population_Density': 'Medium',
                 'Travel_History': 'No Travel',
                 'Social_Activity': social_activity,
                 'Compliance_with_Health_Guidelines': 1,
                 'Vaccination_Hesitancy': 'No',
-                'Transmission_Rate': 1.5, # Середнє значення
-                'Mortality_Rate': 0.02, # Середнє значення
-                'Case_Fatality_Ratio': 0.05, # Середнє значення
+                'Transmission_Rate': 1.5,
+                'Mortality_Rate': 0.02,
+                'Case_Fatality_Ratio': 0.05,
                 'Hospitalization_Rate': 'Medium',
                 'Hospital_Capacity': 'Available',
                 'Healthcare_Personnel_Availability': 'Adequate',
-                'Resource_Utilization': 50.0, # Середнє значення
+                'Resource_Utilization': 50.0,
                 'Daily_New_Cases': 50,
                 'Outbreak_Status': 'No Outbreak',
-                'Infection_Risk_Level': 'Medium Risk',
-                'Disease_Severity': 'Mild',
-                'Risk_Index': 1.5 * 0.02 # Сконструйована ознака з Розділу 1
+                'Infection_Risk_Level': risk_level, # Тепер береться з інтерфейсу
+                'Disease_Severity': disease_severity, # Тепер береться з інтерфейсу
+                'Risk_Index': 1.5 * 0.02 
             }
             
             # Перетворення у DataFrame
