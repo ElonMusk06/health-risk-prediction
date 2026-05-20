@@ -21,7 +21,7 @@ def load_model():
 pipeline = load_model()
 
 st.title("Система оцінки потреби в госпіталізації")
-st.markdown("Цей вебсервіс використовує модель машинного навчання для прогнозування ризику госпіталізації.")
+st.markdown("Цей вебсервіс використовує модель машинного навчання для прогнозування ризику госпіталізації на основі введених клінічних та соціальних показників пацієнта.")
 
 # Розділення інтерфейсу на колонки
 col1, col2 = st.columns([1, 2])
@@ -30,24 +30,25 @@ with col1:
     st.header("Вхідні дані пацієнта")
     
     st.subheader("Демографія")
-    # Додано унікальні ключі для кожного елемента
     age = st.slider("Вік", 18, 100, 50, key="input_age")
     gender = st.selectbox("Стать", ["Male", "Female"], key="input_gender")
     ses = st.selectbox("Соціально-економічний статус (SES)", ["Low", "Medium", "High"], key="input_ses")
     
     st.subheader("Медичні показники")
-    temperature = st.slider("Температура тіла (°C)", 35.5, 41.0, 36.6, step=0.1, key="input_temp")
     chronic = st.number_input("Кількість хронічних захворювань", 0, 10, 0, key="input_chronic")
     vaccination = st.radio("Статус вакцинації", ["Ні", "Так"], key="input_vax")
     vaccination_status = 1 if vaccination == "Так" else 0
     immunity = st.selectbox("Рівень імунітету", ["Low", "Medium", "High"], key="input_immunity")
-    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"], key="input_symptoms")
     
-    disease_severity = st.selectbox("Тяжкість захворювання", ["Mild", "Moderate", "Severe"], index=1, key="input_severity")
-    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"], key="input_diagnosis")
-    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=1, key="input_risk")
+    st.subheader("Клінічний стан та тести")
+    testing_results = st.selectbox("Результати тесту", ["Negative", "Positive"], index=1, key="input_test")
+    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"], index=3, key="input_symptoms")
+    disease_severity = st.selectbox("Тяжкість захворювання", ["Mild", "Moderate", "Severe"], index=2, key="input_severity")
+    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"], index=1, key="input_diagnosis")
+    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=2, key="input_risk")
     
-    st.subheader("Соціальні фактори")
+    st.subheader("Додаткові фактори")
+    temperature = st.slider("Температура середовища (°C)", -15.0, 50.0, 30.0, step=0.1, key="input_temp")
     social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"], key="input_social")
 
 with col2:
@@ -55,48 +56,52 @@ with col2:
     
     if st.button("Розрахувати ризик", type="primary", key="calc_btn"):
         if pipeline is not None:
+            # Словник із точними медіанами та модами для нейтралізації фонових ознак
             input_data = {
                 'Age': age,
                 'Gender': gender,
-                'Location': 'Urban',
-                'Ethnicity': 'Ethnicity1',
+                'Location': 'Urban', # Мода
+                'Ethnicity': 'Ethnicity1', # Мода
                 'SES': ses,
                 'Chronic_Conditions': chronic,
                 'Vaccination_Status': vaccination_status,
-                'Medical_History': 'None',
+                'Medical_History': 'Past Illness', # Мода
                 'Immunity_Level': immunity,
                 'Reported_Symptoms': symptoms,
                 'Diagnosis': diagnosis, 
-                'Testing_Results': 'Negative',
+                'Testing_Results': testing_results, 
                 'Temperature': temperature,
-                'AQI': 100,
-                'Humidity': 50.0,
-                'Population_Density': 'Medium',
-                'Travel_History': 'No Travel',
+                'AQI': 50.0, # Медіана
+                'Humidity': 49.8, # Медіана
+                'Population_Density': 'Medium', # Мода
+                'Travel_History': 'No Travel', # Мода
                 'Social_Activity': social_activity,
-                'Compliance_with_Health_Guidelines': 1,
-                'Vaccination_Hesitancy': 'No',
-                'Transmission_Rate': 1.5,
-                'Mortality_Rate': 0.02,
-                'Case_Fatality_Ratio': 0.05,
-                'Hospitalization_Rate': 'Medium',
-                'Hospital_Capacity': 'Available',
-                'Healthcare_Personnel_Availability': 'Adequate',
-                'Resource_Utilization': 50.0,
-                'Daily_New_Cases': 50,
-                'Outbreak_Status': 'No Outbreak',
+                'Compliance_with_Health_Guidelines': 1, # Медіана
+                'Vaccination_Hesitancy': 'No', # Мода
+                'Transmission_Rate': 1.74, # Медіана
+                'Mortality_Rate': 0.025, # Медіана
+                'Case_Fatality_Ratio': 0.049, # Медіана
+                'Hospitalization_Rate': 'Low', # Мода
+                'Hospital_Capacity': 'Available', # Мода
+                'Healthcare_Personnel_Availability': 'Adequate', # Мода
+                'Resource_Utilization': 50.1, # Медіана
+                'Daily_New_Cases': 20.0, # Медіана
+                'Outbreak_Status': 'No Outbreak', # Мода
                 'Infection_Risk_Level': risk_level, 
                 'Disease_Severity': disease_severity, 
-                'Risk_Index': 1.5 * 0.02 
+                'Risk_Index': 1.74 * 0.025 # Сконструйована ознака (Transmission * Mortality)
             }
             
+            # Перетворення у DataFrame
             input_df = pd.DataFrame([input_data])
             
             try:
+                # Прогноз
                 prediction = pipeline.predict(input_df)[0]
                 proba = pipeline.predict_proba(input_df)[0][1]
                 
-                st.metric("Ймовірність госпіталізації", f"{proba * 100:.1f}%")
+                # Відображення результату
+                st.metric("Ймовірність потреби в госпіталізації", f"{proba * 100:.1f}%")
                 
                 if proba < 0.3:
                     st.success("Профіль ризику: Низький. Госпіталізація не потрібна.")
@@ -105,8 +110,10 @@ with col2:
                 else:
                     st.error("Профіль ризику: Високий. Потребує негайної госпіталізації!")
                 
+                # Інтерпретація SHAP
                 st.subheader("Пояснення моделі (Внесок ознак)")
-                with st.spinner('Обчислення важливості ознак...'):
+                with st.spinner('Обчислення важливості ознак. Зачекайте...'):
+                    # Отримання класифікатора та оброблених даних
                     clf = pipeline.named_steps['clf']
                     prep = pipeline.named_steps['prep']
                     
@@ -127,6 +134,7 @@ with col2:
                     else:
                         shap_val = shap_values[0]
                     
+                    # Побудова графіка
                     fig = shap.waterfall_plot(shap.Explanation(values=shap_val, 
                                                               base_values=explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value, 
                                                               data=X_proc_df.iloc[0], 
