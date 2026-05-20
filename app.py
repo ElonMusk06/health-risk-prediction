@@ -15,51 +15,46 @@ def load_model():
         model = joblib.load('health_model_pipeline.pkl')
         return model
     except FileNotFoundError:
-        st.error("Файл моделі 'health_model_pipeline.pkl' не знайдено. Будь ласка, завантажте його.")
+        st.error("Файл моделі 'health_model_pipeline.pkl' не знайдено.")
         return None
 
 pipeline = load_model()
 
 st.title("Система оцінки потреби в госпіталізації")
-st.markdown("""
-Цей вебсервіс використовує модель машинного навчання для прогнозування ризику госпіталізації на основі введених клінічних та соціальних показників пацієнта.
-""")
+st.markdown("Цей вебсервіс використовує модель машинного навчання для прогнозування ризику госпіталізації.")
 
 # Розділення інтерфейсу на колонки
 col1, col2 = st.columns([1, 2])
+
 with col1:
     st.header("Вхідні дані пацієнта")
     
-    # Група 1: Демографія
     st.subheader("Демографія")
-    age = st.slider("Вік", 18, 100, 50)
-    gender = st.selectbox("Стать", ["Male", "Female"])
-    ses = st.selectbox("Соціально-економічний статус (SES)", ["Low", "Medium", "High"])
+    # Додано унікальні ключі для кожного елемента
+    age = st.slider("Вік", 18, 100, 50, key="input_age")
+    gender = st.selectbox("Стать", ["Male", "Female"], key="input_gender")
+    ses = st.selectbox("Соціально-економічний статус (SES)", ["Low", "Medium", "High"], key="input_ses")
     
-    # Група 2: Медичні показники (ДОДАНО КРИТИЧНІ ОЗНАКИ)
     st.subheader("Медичні показники")
-    temperature = st.slider("Температура тіла (°C)", 35.5, 41.0, 36.6, step=0.1)
-    chronic = st.number_input("Кількість хронічних захворювань", 0, 10, 0)
-    vaccination = st.radio("Статус вакцинації", ["Ні", "Так"])
+    temperature = st.slider("Температура тіла (°C)", 35.5, 41.0, 36.6, step=0.1, key="input_temp")
+    chronic = st.number_input("Кількість хронічних захворювань", 0, 10, 0, key="input_chronic")
+    vaccination = st.radio("Статус вакцинації", ["Ні", "Так"], key="input_vax")
     vaccination_status = 1 if vaccination == "Так" else 0
-    immunity = st.selectbox("Рівень імунітету", ["Low", "Medium", "High"])
-    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"])
+    immunity = st.selectbox("Рівень імунітету", ["Low", "Medium", "High"], key="input_immunity")
+    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"], key="input_symptoms")
     
-    # НОВІ ПОЛЯ ВВОДУ:
-    disease_severity = st.selectbox("Тяжкість захворювання (Disease Severity)", ["Mild", "Moderate", "Severe"], index=1)
-    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"])
-    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=1)
+    disease_severity = st.selectbox("Тяжкість захворювання", ["Mild", "Moderate", "Severe"], index=1, key="input_severity")
+    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"], key="input_diagnosis")
+    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=1, key="input_risk")
     
-    # Група 3: Соціальні фактори
     st.subheader("Соціальні фактори")
-    social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"])
+    social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"], key="input_social")
 
 with col2:
     st.header("Результати прогнозування")
     
-    if st.button("Розрахувати ризик", type="primary"):
+    if st.button("Розрахувати ризик", type="primary", key="calc_btn"):
         if pipeline is not None:
-            # ОНОВЛЕНИЙ СЛОВНИК ВХІДНИХ ДАНИХ
             input_data = {
                 'Age': age,
                 'Gender': gender,
@@ -71,7 +66,7 @@ with col2:
                 'Medical_History': 'None',
                 'Immunity_Level': immunity,
                 'Reported_Symptoms': symptoms,
-                'Diagnosis': diagnosis, # Тепер береться з інтерфейсу
+                'Diagnosis': diagnosis, 
                 'Testing_Results': 'Negative',
                 'Temperature': temperature,
                 'AQI': 100,
@@ -90,20 +85,17 @@ with col2:
                 'Resource_Utilization': 50.0,
                 'Daily_New_Cases': 50,
                 'Outbreak_Status': 'No Outbreak',
-                'Infection_Risk_Level': risk_level, # Тепер береться з інтерфейсу
-                'Disease_Severity': disease_severity, # Тепер береться з інтерфейсу
+                'Infection_Risk_Level': risk_level, 
+                'Disease_Severity': disease_severity, 
                 'Risk_Index': 1.5 * 0.02 
             }
             
-            # Перетворення у DataFrame
             input_df = pd.DataFrame([input_data])
             
-            # Прогноз
             try:
                 prediction = pipeline.predict(input_df)[0]
                 proba = pipeline.predict_proba(input_df)[0][1]
                 
-                # Відображення результату
                 st.metric("Ймовірність госпіталізації", f"{proba * 100:.1f}%")
                 
                 if proba < 0.3:
@@ -113,10 +105,8 @@ with col2:
                 else:
                     st.error("Профіль ризику: Високий. Потребує негайної госпіталізації!")
                 
-                # Інтерпретація SHAP
                 st.subheader("Пояснення моделі (Внесок ознак)")
                 with st.spinner('Обчислення важливості ознак...'):
-                    # Отримання класифікатора та оброблених даних
                     clf = pipeline.named_steps['clf']
                     prep = pipeline.named_steps['prep']
                     
@@ -137,7 +127,6 @@ with col2:
                     else:
                         shap_val = shap_values[0]
                     
-                    # Побудова графіка
                     fig = shap.waterfall_plot(shap.Explanation(values=shap_val, 
                                                               base_values=explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value, 
                                                               data=X_proc_df.iloc[0], 
