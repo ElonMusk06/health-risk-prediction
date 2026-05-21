@@ -63,7 +63,7 @@ with col2:
     if st.button("Розрахувати ризик", type="primary", key="calc_btn"):
         if pipeline is not None:
             # Словник із точними медіанами та модами для нейтралізації фонових ознак
-          input_data = {
+            input_data = {
                 'Age': age,
                 'Gender': gender,
                 'Location': 'Urban',
