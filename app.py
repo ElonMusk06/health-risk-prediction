@@ -47,8 +47,14 @@ with col1:
     diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"], index=1, key="input_diagnosis")
     risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=2, key="input_risk")
     
-    st.subheader("Додаткові фактори")
+    st.subheader("Екологічні та епідеміологічні фактори")
     temperature = st.slider("Температура середовища (°C)", -15.0, 50.0, 30.0, step=0.1, key="input_temp")
+    humidity = st.slider("Вологість (%)", 0.0, 100.0, 50.0, key="input_hum")
+    aqi = st.slider("Індекс якості повітря (AQI)", 0, 300, 50, key="input_aqi")
+    transmission = st.slider("Швидкість передачі інфекції", 0.1, 5.0, 1.74, step=0.1, key="input_trans")
+    daily_cases = st.slider("Нові випадки за день", 0, 100, 20, key="input_cases")
+    
+    st.subheader("Соціальні фактори")
     social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"], key="input_social")
 
 with col2:
@@ -57,39 +63,39 @@ with col2:
     if st.button("Розрахувати ризик", type="primary", key="calc_btn"):
         if pipeline is not None:
             # Словник із точними медіанами та модами для нейтралізації фонових ознак
-            input_data = {
+          input_data = {
                 'Age': age,
                 'Gender': gender,
-                'Location': 'Urban', # Мода
-                'Ethnicity': 'Ethnicity1', # Мода
+                'Location': 'Urban',
+                'Ethnicity': 'Ethnicity1',
                 'SES': ses,
                 'Chronic_Conditions': chronic,
                 'Vaccination_Status': vaccination_status,
-                'Medical_History': 'Past Illness', # Мода
+                'Medical_History': 'Past Illness',
                 'Immunity_Level': immunity,
                 'Reported_Symptoms': symptoms,
                 'Diagnosis': diagnosis, 
                 'Testing_Results': testing_results, 
                 'Temperature': temperature,
-                'AQI': 50.0, # Медіана
-                'Humidity': 49.8, # Медіана
-                'Population_Density': 'Medium', # Мода
-                'Travel_History': 'No Travel', # Мода
+                'AQI': aqi, # ТЕПЕР З ІНТЕРФЕЙСУ
+                'Humidity': humidity, # ТЕПЕР З ІНТЕРФЕЙСУ
+                'Population_Density': 'Medium',
+                'Travel_History': 'No Travel',
                 'Social_Activity': social_activity,
-                'Compliance_with_Health_Guidelines': 1, # Медіана
-                'Vaccination_Hesitancy': 'No', # Мода
-                'Transmission_Rate': 1.74, # Медіана
-                'Mortality_Rate': 0.025, # Медіана
-                'Case_Fatality_Ratio': 0.049, # Медіана
-                'Hospitalization_Rate': 'Low', # Мода
-                'Hospital_Capacity': 'Available', # Мода
-                'Healthcare_Personnel_Availability': 'Adequate', # Мода
-                'Resource_Utilization': 50.1, # Медіана
-                'Daily_New_Cases': 20.0, # Медіана
-                'Outbreak_Status': 'No Outbreak', # Мода
+                'Compliance_with_Health_Guidelines': 1,
+                'Vaccination_Hesitancy': 'No',
+                'Transmission_Rate': transmission, # ТЕПЕР З ІНТЕРФЕЙСУ
+                'Mortality_Rate': 0.025, 
+                'Case_Fatality_Ratio': 0.049, 
+                'Hospitalization_Rate': 'Low', 
+                'Hospital_Capacity': 'Available', 
+                'Healthcare_Personnel_Availability': 'Adequate', 
+                'Resource_Utilization': 50.1, 
+                'Daily_New_Cases': daily_cases, # ТЕПЕР З ІНТЕРФЕЙСУ
+                'Outbreak_Status': 'No Outbreak', 
                 'Infection_Risk_Level': risk_level, 
                 'Disease_Severity': disease_severity, 
-                'Risk_Index': 1.74 * 0.025 # Сконструйована ознака (Transmission * Mortality)
+                'Risk_Index': transmission * 0.025 # Оновлено
             }
             
             # Перетворення у DataFrame
