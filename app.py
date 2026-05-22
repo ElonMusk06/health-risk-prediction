@@ -6,7 +6,7 @@ import shap
 import matplotlib.pyplot as plt
 
 # Налаштування сторінки
-st.set_page_config(page_title="Health Risk Predictor", layout="wide")
+st.set_page_config(page_title="Прогнозування госпіталізації (XGBoost)", layout="wide")
 
 # Завантаження моделі
 @st.cache_resource
@@ -21,7 +21,7 @@ def load_model():
 pipeline = load_model()
 
 st.title("Система оцінки потреби в госпіталізації")
-st.markdown("Цей вебсервіс використовує модель машинного навчання для прогнозування ризику госпіталізації на основі введених клінічних та соціальних показників пацієнта.")
+st.markdown("Цей вебсервіс використовує ансамблеву модель **XGBoost** для прогнозування ризику госпіталізації на основі клінічних та екологічних показників.")
 
 # Розділення інтерфейсу на колонки
 col1, col2 = st.columns([1, 2])
@@ -42,27 +42,21 @@ with col1:
     
     st.subheader("Клінічний стан та тести")
     testing_results = st.selectbox("Результати тесту", ["Negative", "Positive"], index=1, key="input_test")
-    symptoms = st.selectbox("Повідомлені симптоми", ["None", "Mild", "Moderate", "Severe"], index=3, key="input_symptoms")
+    symptoms = st.selectbox("Повідомлені симптоми", ["Unknown", "Mild", "Moderate", "Severe"], index=3, key="input_symptoms")
     disease_severity = st.selectbox("Тяжкість захворювання", ["Mild", "Moderate", "Severe"], index=2, key="input_severity")
-    diagnosis = st.selectbox("Поточний діагноз", ["None", "Disease1", "Disease2", "Disease3"], index=1, key="input_diagnosis")
-    risk_level = st.selectbox("Рівень інфекційного ризику", ["Low Risk", "Medium Risk", "High Risk"], index=2, key="input_risk")
     
     st.subheader("Екологічні та епідеміологічні фактори")
     temperature = st.slider("Температура середовища (°C)", -15.0, 50.0, 30.0, step=0.1, key="input_temp")
-    humidity = st.slider("Вологість (%)", 0.0, 100.0, 50.0, key="input_hum")
     aqi = st.slider("Індекс якості повітря (AQI)", 0, 300, 50, key="input_aqi")
     transmission = st.slider("Швидкість передачі інфекції", 0.1, 5.0, 1.74, step=0.1, key="input_trans")
     daily_cases = st.slider("Нові випадки за день", 0, 100, 20, key="input_cases")
-    
-    st.subheader("Соціальні фактори")
-    social_activity = st.selectbox("Соціальна активність", ["Low", "Medium", "High"], key="input_social")
 
 with col2:
     st.header("Результати прогнозування")
     
     if st.button("Розрахувати ризик", type="primary", key="calc_btn"):
         if pipeline is not None:
-            # Словник із точними медіанами та модами для нейтралізації фонових ознак
+            # Словник із точними медіанами для нейтралізації фонових ознак (Baseline Stabilization)
             input_data = {
                 'Age': age,
                 'Gender': gender,
@@ -71,39 +65,36 @@ with col2:
                 'SES': ses,
                 'Chronic_Conditions': chronic,
                 'Vaccination_Status': vaccination_status,
-                'Medical_History': 'Past Illness',
+                'Medical_History': 'Unknown', 
                 'Immunity_Level': immunity,
                 'Reported_Symptoms': symptoms,
-                'Diagnosis': diagnosis, 
+                'Diagnosis': 'Unknown', 
                 'Testing_Results': testing_results, 
                 'Temperature': temperature,
-                'AQI': aqi, # ТЕПЕР З ІНТЕРФЕЙСУ
-                'Humidity': humidity, # ТЕПЕР З ІНТЕРФЕЙСУ
+                'AQI': aqi,
+                'Humidity': 49.8, # Фіксована медіана
                 'Population_Density': 'Medium',
                 'Travel_History': 'No Travel',
-                'Social_Activity': social_activity,
+                'Social_Activity': 'Low',
                 'Compliance_with_Health_Guidelines': 1,
                 'Vaccination_Hesitancy': 'No',
-                'Transmission_Rate': transmission, # ТЕПЕР З ІНТЕРФЕЙСУ
-                'Mortality_Rate': 0.025, 
-                'Case_Fatality_Ratio': 0.049, 
-                'Hospitalization_Rate': 'Low', 
-                'Hospital_Capacity': 'Available', 
-                'Healthcare_Personnel_Availability': 'Adequate', 
-                'Resource_Utilization': 50.1, 
-                'Daily_New_Cases': daily_cases, # ТЕПЕР З ІНТЕРФЕЙСУ
-                'Outbreak_Status': 'No Outbreak', 
-                'Infection_Risk_Level': risk_level, 
+                'Transmission_Rate': transmission,
+                'Mortality_Rate': 0.025, # Фіксована медіана
+                'Case_Fatality_Ratio': 0.049, # Фіксована медіана
+                'Hospitalization_Rate': 'Low',
+                'Hospital_Capacity': 'Available',
+                'Healthcare_Personnel_Availability': 'Adequate',
+                'Resource_Utilization': 50.1,
+                'Daily_New_Cases': daily_cases,
+                'Outbreak_Status': 'No Outbreak',
+                'Infection_Risk_Level': 'Medium Risk', 
                 'Disease_Severity': disease_severity, 
-                'Risk_Index': transmission * 0.025 # Оновлено
+                'Risk_Index': transmission * 0.025 # Перерахунок похідної ознаки
             }
             
-            # Перетворення у DataFrame
             input_df = pd.DataFrame([input_data])
             
             try:
-                # Прогноз
-                prediction = pipeline.predict(input_df)[0]
                 proba = pipeline.predict_proba(input_df)[0][1]
                 
                 # Відображення результату
@@ -117,34 +108,37 @@ with col2:
                     st.error("Профіль ризику: Високий. Потребує негайної госпіталізації!")
                 
                 # Інтерпретація SHAP
-                st.subheader("Пояснення моделі (Внесок ознак)")
+                st.subheader("Пояснення моделі (SHAP Waterfall Plot)")
                 with st.spinner('Обчислення важливості ознак. Зачекайте...'):
-                    # Отримання класифікатора та оброблених даних
-                    clf = pipeline.named_steps['clf']
-                    prep = pipeline.named_steps['prep']
+                    clf = pipeline.named_steps['classifier']
+                    prep = pipeline.named_steps['preprocessor']
                     
                     X_proc = prep.transform(input_df)
-                    num_features = prep.transformers_[0][2]
+                    num_features_out = prep.transformers_[0][2]
                     cat_encoder = prep.named_transformers_['cat'].named_steps['onehot']
                     cat_features_in = prep.transformers_[1][2]
                     cat_feature_names = cat_encoder.get_feature_names_out(cat_features_in).tolist()
-                    all_feature_names = num_features + cat_feature_names
+                    all_feature_names = num_features_out + cat_feature_names
                     
                     X_proc_df = pd.DataFrame(X_proc, columns=all_feature_names)
                     
                     explainer = shap.TreeExplainer(clf)
                     shap_values = explainer.shap_values(X_proc_df, check_additivity=False)
                     
+                    # Логіка для обробки різних виводів (XGBoost vs RF)
                     if isinstance(shap_values, list):
                         shap_val = shap_values[1][0]
+                        base_val = explainer.expected_value[1]
                     else:
                         shap_val = shap_values[0]
+                        base_val = explainer.expected_value
                     
                     # Побудова графіка
                     fig = shap.waterfall_plot(shap.Explanation(values=shap_val, 
-                                                              base_values=explainer.expected_value[1] if isinstance(explainer.expected_value, list) else explainer.expected_value, 
+                                                              base_values=base_val, 
                                                               data=X_proc_df.iloc[0], 
                                                               feature_names=all_feature_names), 
+                                              max_display=15, 
                                               show=False)
                     st.pyplot(plt.gcf())
                     plt.clf()
